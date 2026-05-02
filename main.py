@@ -15,6 +15,8 @@ from kivy.core.window import Window
 from kivy.clock import Clock
 import json, os
 from datetime import datetime, date, timedelta
+from kivy.utils import platform
+
 
 # ── Màu sắc ──────────────────────────────────────────────────────────────────
 PINK       = (0.831, 0.325, 0.494, 1)
@@ -30,18 +32,57 @@ AMBER      = (0.729, 0.459, 0.090, 1)
 RED        = (0.639, 0.176, 0.176, 1)
 RED_BG     = (0.988, 0.922, 0.922, 1)
 
-DATA_FILE = "nail_crm_data.json"
+def get_data_path():
+    """Return a writable data path on Android and a local path on desktop."""
+    if platform == "android":
+        try:
+            from android.storage import app_storage_path
+            return os.path.join(app_storage_path(), "nail_crm_data.json")
+        except Exception as e:
+            print("ANDROID STORAGE PATH ERROR:", e)
+            return os.path.join(os.getcwd(), "nail_crm_data.json")
+    return "nail_crm_data.json"
+
+DATA_FILE = get_data_path()
+
+def default_data():
+    return {"customers": [], "queue": [], "next_tx_id": 1}
 
 # ── Data layer ────────────────────────────────────────────────────────────────
 def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"customers": [], "queue": [], "next_tx_id": 1}
+    try:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                return default_data()
+            data.setdefault("customers", [])
+            data.setdefault("queue", [])
+            data.setdefault("next_tx_id", 1)
+            return data
+    except Exception as e:
+        print("LOAD DATA ERROR:", e)
+    return default_data()
 
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        folder = os.path.dirname(DATA_FILE)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print("SAVE DATA ERROR:", e)
+
+def update_canvas_rect(widget):
+    """Safely update Rectangle/RoundedRectangle background instructions."""
+    try:
+        for instr in widget.canvas.before.children:
+            if hasattr(instr, "pos") and hasattr(instr, "size"):
+                instr.pos = widget.pos
+                instr.size = widget.size
+    except Exception as e:
+        print("CANVAS UPDATE ERROR:", e)
 
 def get_next_code(data):
     used = set(c["code"] for c in data["customers"] if c.get("code"))
@@ -520,8 +561,8 @@ class CustomerScreen(BaseScreen):
                            height=dp(110), padding=dp(10), spacing=dp(6))
         with topbar.canvas.before:
             Color(*WHITE); Rectangle(pos=topbar.pos, size=topbar.size)
-        topbar.bind(pos=lambda i,v: setattr(topbar.canvas.before.children[1],'pos',v),
-                    size=lambda i,v: setattr(topbar.canvas.before.children[1],'size',v))
+        topbar.bind(pos=lambda *a, w=topbar: update_canvas_rect(w),
+                    size=lambda *a, w=topbar: update_canvas_rect(w))
 
         # Title + stats
         title_row = BoxLayout(size_hint_y=None, height=dp(30))
@@ -603,8 +644,7 @@ class CustomerScreen(BaseScreen):
         self.add_widget(fl)
 
     def _upd_chip(self, w):
-        w.canvas.before.children[1].pos  = w.pos
-        w.canvas.before.children[1].size = w.size
+        update_canvas_rect(w)
 
     def _set_filter(self, f):
         self.current_filter = f
@@ -658,8 +698,8 @@ class QueueScreen(BaseScreen):
         hdr  = BoxLayout(size_hint_y=None, height=dp(54), padding=dp(12))
         with hdr.canvas.before:
             Color(*WHITE); Rectangle(pos=hdr.pos, size=hdr.size)
-        hdr.bind(pos=lambda i,v: setattr(hdr.canvas.before.children[1],'pos',v),
-                 size=lambda i,v: setattr(hdr.canvas.before.children[1],'size',v))
+        hdr.bind(pos=lambda *a, w=hdr: update_canvas_rect(w),
+                 size=lambda *a, w=hdr: update_canvas_rect(w))
         hdr.add_widget(Label(text="⏳ Hàng chờ", font_size=sp(18),
                              bold=True, color=DARK, halign="left",
                              text_size=(dp(300), None)))
@@ -720,8 +760,7 @@ class QueueScreen(BaseScreen):
                                       size_hint_y=None, height=dp(60)))
 
     def _upd_row(self, r):
-        r.canvas.before.children[1].pos  = r.pos
-        r.canvas.before.children[1].size = r.size
+        update_canvas_rect(r)
 
     def _promote(self, qi):
         code = get_next_code(self.app_ref.data)
@@ -756,8 +795,8 @@ class StatsScreen(BaseScreen):
         hdr = BoxLayout(size_hint_y=None, height=dp(54), padding=dp(12))
         with hdr.canvas.before:
             Color(*WHITE); Rectangle(pos=hdr.pos, size=hdr.size)
-        hdr.bind(pos=lambda i,v: setattr(hdr.canvas.before.children[1],'pos',v),
-                 size=lambda i,v: setattr(hdr.canvas.before.children[1],'size',v))
+        hdr.bind(pos=lambda *a, w=hdr: update_canvas_rect(w),
+                 size=lambda *a, w=hdr: update_canvas_rect(w))
         hdr.add_widget(Label(text="📊 Thống kê", font_size=sp(18),
                              bold=True, color=DARK, halign="left",
                              text_size=(dp(300), None)))
@@ -801,8 +840,7 @@ class StatsScreen(BaseScreen):
             self.content.add_widget(row)
 
     def _upd(self, r):
-        r.canvas.before.children[1].pos  = r.pos
-        r.canvas.before.children[1].size = r.size
+        update_canvas_rect(r)
 
 
 # ── Bottom Navigation ─────────────────────────────────────────────────────────
@@ -833,8 +871,7 @@ class BottomNav(BoxLayout):
         self._highlight("customers")
 
     def _upd(self, *a):
-        self.canvas.before.children[1].pos  = self.pos
-        self.canvas.before.children[1].size = self.size
+        update_canvas_rect(self)
 
     def _on_tap(self, touch, key, btn):
         self.sm.current = key
