@@ -1,0 +1,48 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          python3-pip build-essential git \
+          libffi-dev libssl-dev \
+          libsdl2-dev libsdl2-image-dev \
+          libsdl2-mixer-dev libsdl2-ttf-dev \
+          libportmidi-dev libswscale-dev \
+          libavformat-dev libavcodec-dev \
+          zlib1g-dev openjdk-17-jdk unzip
+
+    - name: Install Python packages
+      run: |
+        pip install buildozer==1.4.0 cython
+
+    - name: Build APK
+      run: |
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        buildozer android debug
+      env:
+        BUILDOZER_WARN_ON_ROOT: '1'
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: NailCRM-APK
+        path: bin/*.apk
