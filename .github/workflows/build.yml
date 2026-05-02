@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
       ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
       ANDROIDSDK: /home/runner/.buildozer/android/platform/android-sdk
@@ -21,11 +20,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '11'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,22 +45,17 @@ jobs:
             ccache autoconf automake libtool pkg-config \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake
 
-      - name: Check Java version
-        run: |
-          echo $JAVA_HOME
-          java -version
-
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install buildozer cython virtualenv
 
-      - name: Install Android SDK command line tools
+      - name: Install older Android SDK command line tools
         run: |
           mkdir -p "$ANDROID_HOME/cmdline-tools"
           cd "$ANDROID_HOME/cmdline-tools"
 
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
 
           rm -rf latest
@@ -78,9 +72,7 @@ jobs:
           ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$ANDROID_HOME/tools/bin/sdkmanager"
 
       - name: Build APK
-        run: |
-          java -version
-          buildozer android debug
+        run: buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
