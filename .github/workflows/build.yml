@@ -10,22 +10,23 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
       ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
       ANDROIDSDK: /home/runner/.buildozer/android/platform/android-sdk
       ANDROID_NDK_HOME: /home/runner/.buildozer/android/platform/android-ndk-r25b
       ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 11
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '17'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,15 +50,17 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip uninstall -y cython || true
-          pip install buildozer "cython==0.29.36" virtualenv
+          pip uninstall -y cython Cython || true
+          pip install buildozer virtualenv
+          pip install --force-reinstall "Cython==0.29.36"
+          python -c "import Cython; print('CYTHON VERSION =', Cython.__version__)"
 
-      - name: Install older Android SDK command line tools
+      - name: Install Android SDK command line tools
         run: |
           mkdir -p "$ANDROID_HOME/cmdline-tools"
           cd "$ANDROID_HOME/cmdline-tools"
 
-          wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip
 
           rm -rf latest
@@ -67,11 +70,17 @@ jobs:
 
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
-            "platforms;android-31" \
-            "build-tools;31.0.0"
+            "platforms;android-33" \
+            "build-tools;33.0.2"
 
           mkdir -p "$ANDROID_HOME/tools/bin"
           ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$ANDROID_HOME/tools/bin/sdkmanager"
+
+      - name: Force Java 17
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
+          echo "$JAVA_HOME_17_X64/bin" >> $GITHUB_PATH
+          java -version
 
       - name: Clean old Buildozer files
         run: |
@@ -80,6 +89,7 @@ jobs:
 
       - name: Build APK
         run: |
+          java -version
           buildozer android debug
 
       - name: Upload APK
