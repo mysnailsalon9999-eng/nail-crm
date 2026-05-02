@@ -35,7 +35,7 @@ jobs:
             libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev \
             libavformat-dev libavcodec-dev \
-            zlib1g-dev openjdk-11-jdk \
+            zlib1g-dev openjdk-17-jdk \
             ccache autoconf automake libtool pkg-config \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake
 
