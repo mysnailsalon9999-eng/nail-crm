@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
       ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
       ANDROIDSDK: /home/runner/.buildozer/android/platform/android-sdk
@@ -19,6 +20,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,9 +42,14 @@ jobs:
             libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev \
             libavformat-dev libavcodec-dev \
-            zlib1g-dev openjdk-17-jdk \
+            zlib1g-dev \
             ccache autoconf automake libtool pkg-config \
             libncurses5-dev libncursesw5-dev libtinfo5 cmake
+
+      - name: Check Java version
+        run: |
+          echo $JAVA_HOME
+          java -version
 
       - name: Install Python dependencies
         run: |
@@ -66,7 +78,9 @@ jobs:
           ln -sf "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$ANDROID_HOME/tools/bin/sdkmanager"
 
       - name: Build APK
-        run: buildozer android debug
+        run: |
+          java -version
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
